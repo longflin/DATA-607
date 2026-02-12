@@ -1,0 +1,12 @@
+---
+title: "Assignment 3A Global Baseline Estimate Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Assignment 3A Global Baseline Estimate Approach
+
+For this week's assignment, I will use the movie ratings data provided in the spreadsheet and implement a Global Baseline Estimate recommendation system in R. In order to do this, I will use the Global Baseline Estimate algorithm with the movie ratings data provided. The Global Baseline Estimate is one of the best non-personalized recommender system algorithms.
+
+Source: https://brightspace.cuny.edu/content/enforced/1154240-SPS01_DATA_607_1262_1_32167/MovieRatings.xlsx?ou=1154240
