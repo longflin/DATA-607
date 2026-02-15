@@ -1,0 +1,101 @@
+---
+title: "Assignment 3B Window Functions Code Base"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Window Functions Overview
+
+For this assignment, I will use a dataset that I got originally from kaggle and uploaded to github.  The dataset includes daily bitcoin historical data from 2018 to 2026.  I will use window functions to calculate the year-to-date average and the six-day moving averages for each observation in the year 2026.
+
+kaggle source: https://www.kaggle.com/datasets/novandraanugrah/bitcoin-historical-datasets-2018-2024?select=btc_1d_data_2018_to_2025.csv
+
+github source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%203B/btc_1d_data_2018_to_2025.csv
+
+
+
+## Calculating year-to-date average
+
+In order to calculate the year to date average, I will start by importing the data into a dataframe.
+
+```{r}
+library(tidyverse)
+
+url <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%203B/btc_1d_data_2018_to_2025.csv"
+
+btc_df <- read_csv(
+  file = url,
+  show_col_types = FALSE,
+  progress = FALSE
+)
+
+head(btc_df, 10)
+```
+
+Next I will take a subset of the data for only items in 2026 and include only the "Close Time" and "Close" columns.  These columns represent the date and closing price for the specific observation. I also extracted the date out of the "Close Time" data point because the close time was not needed since it was always 23:59 UTC time.
+
+```{r}
+btc_2026_df <- btc_df |>
+  filter(
+    year(btc_df$`Close time`) == "2026"
+  ) 
+
+btc_2026_df <- btc_2026_df[c("Close time", "Close")]
+
+btc_2026_df <- btc_2026_df |>
+  mutate(
+    Date = as.Date(`Close time`)
+  )
+
+btc_2026_df <- btc_2026_df[c("Date", "Close")]
+
+head(btc_2026_df, 10)
+```
+With the subset of observations from 2026, I'll create another column that shows the YTD average.  In order to get the year to date average, I first have to arrange the data in order by the close time and then calculate the cumulative mean on the close price.
+
+```{r}
+btc_2026_df <- btc_2026_df |>
+  arrange(btc_2026_df$`Close time`) |>
+    mutate("YTD Average" = cummean(btc_2026_df$Close))
+
+head(btc_2026_df, 10)
+```
+
+Next I will create a column for the six day moving averages for the 2026 bitcoin data.  In order to get the six day moving average, I'll use the rollmean() function from the "zoo" package.
+
+```{r}
+library(zoo) # Required for rollmean()
+
+btc_2026_df <- btc_2026_df |>
+  arrange(btc_2026_df$`Close time`) |>
+    mutate(
+      # Rolling (6-Day) - Window moves with the date
+      # k=6: The window size
+      # fill=NA: Fills the first 5 days with NA (since they don't have enough history)
+      # align="right": Calculates using the current day + previous 5 days
+      "6 Day Moving Average" = rollmean(btc_2026_df$Close, k = 6, fill = NA, align = "right")
+    )
+
+head(btc_2026_df, 10)
+```
+
+Finally, to improve readability, I'll change the column name for "Close" to "Price", and add currency formatting for the price, YTD average, and 6 day moving average.  I also removed the decimal values that represent the cent values on the prices because the numbers are large and the cent values are just insignificant in this context.
+
+```{r}
+library(gt)
+btc_2026_df |>
+  gt() |>
+  cols_label(
+    Close = "Price"
+  ) |>
+  fmt_currency(
+    columns = c(`Close`, `YTD Average`, `6 Day Moving Average`),
+    currency = "USD",
+    decimals = 0
+  )
+```
+
+## Final Conclusions
+
+Using the table above, I am able to see that even though the price of bitcoin dipped below $70,000 in February 2026, the YTD average up to that point was still above $80,000 while the 6 day moving average was a lot closer to the actual price at around $70,000.  I think in this example, the 6 day moving average is a much better average because it gives a value closer to the current price.
