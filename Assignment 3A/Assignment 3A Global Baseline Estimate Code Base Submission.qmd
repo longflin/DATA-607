@@ -145,11 +145,55 @@ target_movie_bias <- movie_biases |>
   filter(movie_id == target_movie) |>
     pull(movie_bias)
 
-# Global Baseline Estimate = Mean Movie Rating + Pitch Perfect 2's rating relative to average + Param's rating relative to average
 predicted_rating <- mean_movie_rating + target_movie_bias + target_user_bias
 
-# Clamp the prediction (ensure it stays between 1 and 5)
+# Keep predictions within the typical 1 to 5 rating scale
 predicted_rating <- pmin(pmax(predicted_rating, 1), 5)
 
 print(paste("Predicted rating for", toString(target_user),"on", toString(target_movie),"is", round(predicted_rating, 2)))
 ```
+
+## Generating Recommendations
+
+For generating recommendations, I'll calculate all the user-movie combinations that have not been rated.
+
+```{r}
+library(tidyr)
+all_movie_user_combinations <- crossing(user_id = ratings_data$user_id, movie_id = ratings_data$movie_id)
+
+not_rated <- all_movie_user_combinations |>
+  anti_join(ratings_data, by = c("user_id", "movie_id"))
+
+predicted_ratings <- not_rated |>
+  left_join(user_biases, by = "user_id") |>
+  left_join(movie_biases, by = "movie_id") |>
+  mutate(
+    predicted_rating = mean_movie_rating + user_bias + movie_bias
+  ) |>
+  # Keep predictions within the typical 1 to 5 rating scale
+  mutate(
+      predicted_rating = pmin(pmax(predicted_rating, 1), 5)
+  )
+
+# View predicted ratings for missing entries
+head(predicted_ratings)
+```
+
+Next I'll generate the top three recommendations for Dan based on the predictions.
+
+```{r}
+user_recommendations <- predicted_ratings |>
+  filter(user_id == "Dan") |>
+  arrange(desc(predicted_rating)) |>
+  select("Movie" = movie_id, "Predicted rating" = predicted_rating)
+
+dan_top_three_recommendations <- head(user_recommendations, 3)
+head(dan_top_three_recommendations)
+```
+
+```{}
+```
+
+## Conclusion
+
+The Global Baseline Estimate recommendation system is an effective way to generate predictions taking into account a user's bias and a movie's bias with the mean movie rating.
