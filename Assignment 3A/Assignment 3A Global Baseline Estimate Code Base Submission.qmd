@@ -1,0 +1,155 @@
+---
+title: "Assignment 3A Global Baseline Estimate"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this assignment, I'll use the movie ratings data provided in the spreadsheet and implement a Global Baseline Estimate recommendation system in R. In order to do this, I will use the Global Baseline Estimate implementation algorithm provided. The Global Baseline Estimate is one of the best non-personalized recommender system algorithms.
+
+source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%203A/Movie_ratings.csv
+
+## Data Input
+
+First I'll populate the data, from the spreadsheet provided, into a data frame. In order to do this, I manually added the data.
+
+```{r}
+library(tidyverse)
+
+ratings_data <- tibble(
+  user_id = c("Burton", "Burton",
+              "Charley", "Charley", "Charley", "Charley", "Charley", "Charley",
+              "Dan", "Dan",
+              "Dieudonne", "Dieudonne", "Dieudonne",
+              "Matt", "Matt", "Matt", "Matt",
+              "Mauricio", "Mauricio", "Mauricio", "Mauricio",
+              "Max", "Max", "Max", "Max", "Max", "Max",
+              "Nathan",
+              "Param", "Param", "Param", "Param",
+              "Parshu", "Parshu", "Parshu", "Parshu", "Parshu", "Parshu",
+              "Prashanth", "Prashanth", "Prashanth", "Prashanth", "Prashanth",
+              "Shipra", "Shipra", "Shipra",
+              "Sreejaya", "Sreejaya", "Sreejaya", "Sreejaya", "Sreejaya", "Sreejaya",
+              "Steve", "Steve",
+              "Vuthy", "Vuthy", "Vuthy", "Vuthy", "Vuthy",
+              "Xingjia", "Xingjia"
+              ),
+  movie_id = c("JungleBook", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "PitchPerfect", "StarWarsForce",
+              "Deadpool", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "StarWarsForce",
+              "CaptainAmerica", "Frozen", "PitchPerfect", "StarWarsForce",
+              "CaptainAmerica", "Frozen", "JungleBook", "PitchPerfect",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "PitchPerfect", "StarWarsForce",
+              "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "PitchPerfect", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "StarWarsForce",
+              "Frozen", "JungleBook", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "PitchPerfect", "StarWarsForce",
+              "CaptainAmerica", "StarWarsForce",
+              "CaptainAmerica", "Deadpool", "Frozen", "JungleBook", "PitchPerfect",
+              "Frozen", "JungleBook"
+              ),
+  rating  = c(4, 4,
+              4, 5, 4, 3, 2, 3,
+              5, 5, 
+              5, 4, 5,
+              4, 2, 2, 5,
+              4, 3, 3, 4,
+              4, 4, 4, 2, 2, 4,
+              4,
+              4, 4, 1, 5,
+              4, 3, 5, 5, 2, 3,
+              5, 5, 5, 5, 4,
+              4, 5, 3,
+              5, 5, 5, 4, 4, 5,
+              4, 4,
+              4, 5, 3, 3, 3,
+              5, 5
+              )
+)
+
+print(ratings_data)
+```
+
+## Calculations
+
+I'll calculate the mean movie rating by taking a mean of all the ratings.
+
+```{r}
+mean_movie_rating <- round(mean(ratings_data$rating), 2)
+
+print(paste("mean_movie_rating:", round(mean_movie_rating, 2)))
+```
+
+Next, I'll calculate the movie biases by subtracting the mean_movie_rating from the mean of the movie's ratings.
+
+```{r}
+movie_biases <- ratings_data |>
+  group_by(movie_id) |>
+  summarise(movie_bias = round(mean(rating) - mean_movie_rating, 2))
+
+print(movie_biases)
+```
+
+Next, I'll calculate the user biases by subtracting the mean_movie_rating from the mean of the user's ratings.
+
+```{r}
+user_biases <- ratings_data |>
+  left_join(movie_biases, by = "movie_id") |>
+  group_by(user_id) |>
+  summarise(user_bias = mean(rating) - mean_movie_rating)
+
+print(user_biases)
+```
+
+## Making a prediction
+
+I'll use the recommendation system to predict what Param will rate PitchPerfect.
+
+```{r}
+target_user <- "Param"
+target_movie <- "PitchPerfect"
+
+target_user_bias <- user_biases |>
+  filter(user_id == target_user) |>
+    pull(user_bias)
+
+target_movie_bias <- movie_biases |>
+  filter(movie_id == target_movie) |>
+    pull(movie_bias)
+
+# Global Baseline Estimate = Mean Movie Rating + Pitch Perfect 2's rating relative to average + Param's rating relative to average
+predicted_rating <- mean_movie_rating + target_movie_bias + target_user_bias
+
+# Clamp the prediction (ensure it stays between 1 and 5)
+predicted_rating <- pmin(pmax(predicted_rating, 1), 5)
+
+print(paste("Predicted rating for", toString(target_user),"on", toString(target_movie),"is", round(predicted_rating, 2)))
+```
+
+Next, I'll use the recommendation system to predict what Burton will rate CaptainAmerica.
+
+```{r}
+target_user <- "Burton"
+target_movie <- "CaptainAmerica"
+
+target_user_bias <- user_biases |>
+  filter(user_id == target_user) |>
+    pull(user_bias)
+
+target_movie_bias <- movie_biases |>
+  filter(movie_id == target_movie) |>
+    pull(movie_bias)
+
+# Global Baseline Estimate = Mean Movie Rating + Pitch Perfect 2's rating relative to average + Param's rating relative to average
+predicted_rating <- mean_movie_rating + target_movie_bias + target_user_bias
+
+# Clamp the prediction (ensure it stays between 1 and 5)
+predicted_rating <- pmin(pmax(predicted_rating, 1), 5)
+
+print(paste("Predicted rating for", toString(target_user),"on", toString(target_movie),"is", round(predicted_rating, 2)))
+```
