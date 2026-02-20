@@ -1,0 +1,13 @@
+---
+title: "Project 1 Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Project 1 Approach
+
+For Project 1, I will use the chess tournament results data set provided in the text file to create a R Markdown file that can generate a .CSV file.  The .CSV file will include the Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents.  The chess rating system is a numerical rating system used to assess a player's relative skill level in zero-sum games.
+
+
+Source:  https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%201/tournamentinfo.txt
