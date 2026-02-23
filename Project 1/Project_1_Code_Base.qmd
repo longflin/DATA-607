@@ -1,0 +1,191 @@
+---
+title: "Project 1"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Project 1 Overview
+
+The goal of this project is to use a given dataset, of players in a chess tournament, and create an R Markdown file that can generate a .csv file with the following information for all of the players:
+
+-   Player’s Name
+-   Player’s State
+-   Total Number of Points
+-   Player’s Pre-Rating
+-   Average Pre Chess Rating of Opponents
+
+Source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%201/tournamentinfo.txt
+
+## Creating the data frame
+
+First, I'll read the data from my github and parse the info into the tournament_df dataframe.
+
+```{r}
+library(tidyverse)
+
+# 1. Load the raw text
+raw_lines <- readLines("https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%201/tournamentinfo.txt")
+
+# 2. Remove dashes and empty lines
+clean_lines <- raw_lines[!grepl("^-+$", raw_lines) & nzchar(raw_lines)]
+
+# 3. Skip the header (first 2 lines of the remaining text)
+data_lines <- clean_lines[3:length(clean_lines)]
+
+# 4. Separate the two-row structure
+# Every odd line is a "Name" row, every even line is a "ID/Rating" row
+name_rows <- data_lines[seq(1, length(data_lines), by = 2)]
+info_rows <- data_lines[seq(2, length(data_lines), by = 2)]
+
+# 5. Parse the Name Rows (Fixed Width)
+# Column positions: Pair Num (1-5), Name (9-40), Total Pts (36-40), Rounds (42-end)
+names_df <- data.frame(
+  pair_num = as.numeric(str_sub(name_rows, 1, 5)),
+  player_name = str_trim(str_sub(name_rows, 9, 40)),
+  total_pts = as.numeric(str_sub(name_rows, 42, 44)),
+  stringsAsFactors = FALSE
+)
+
+# 6. Parse the Info Rows (Extracting State and Pre-Rating)
+info_df <- data.frame(
+  state = str_trim(str_sub(info_rows, 1, 5)),
+  uscf_id = str_extract(info_rows, "\\d{8}"),
+  pre_rating = as.numeric(str_extract(info_rows, "(?<=R: )\\s*\\d+")),
+  stringsAsFactors = FALSE
+)
+
+# 7. Merge names with info
+tournament_df <- cbind(names_df, info_df)
+
+head(tournament_df, 100)
+```
+
+## Round Data
+Next I parsed the round data in order to calculate the average ratings of each person's opponents.
+
+```{r}
+# Extract the string containing the rounds
+rounds_raw <- str_sub(name_rows, 42, -1)
+
+# Extract just the digits (Opponent Pair Numbers)
+# We use str_extract_all to get every number in the row
+opponents_list <- str_extract_all(rounds_raw, "(?<=[WLD])\\s*\\d+")
+
+# Convert the list into a data frame where each row is a game
+opponents_df <- data.frame(
+  pair_num = rep(tournament_df$pair_num, lengths(opponents_list)),
+  opponent_id = as.numeric(unlist(opponents_list))
+)
+
+# Join with tournament_df to get the rating for each opponent_id
+avg_ratings <- opponents_df |>
+  left_join(tournament_df |> 
+    select(pair_num, pre_rating), 
+    by = c("opponent_id" = "pair_num")) |>
+      group_by(pair_num) |>
+        summarize(avg_opp_rating = round(mean(pre_rating, na.rm = TRUE), 0))
+
+# Merge back into your main data frame
+tournament_df <- tournament_df |>
+  left_join(avg_ratings, by = "pair_num")
+
+head(tournament_df, 100)
+
+# Check GARY HUA (Pair 1)
+print(tournament_df[1, c("player_name", "avg_opp_rating")])
+```
+In order to check the results, I pulled the average opponent rating value from the dataframe for the first person (Gary Hua) and got 1605.  I then pulled the values from the .txt file to verify that it was correct.  From the .txt file, I got the following:
+
+```{}
+    1 | GARY HUA                        |6.0  |W  39|W  21|W  18|W  14|W   7|D  12|D   4|
+   ON | 15445895 / R: 1794   ->1817     |N:2  |W    |B    |W    |B    |W    |B    |W    |
+```
+   
+
+From there, I went through each round opponent and got their value pre rating:
+
+W 39 corresponds to pair num 39 with a pre-rating of 1436:
+
+```{}
+   39 | JOEL R HENDON                   |3.0  |L   1|W  54|W  40|L  16|W  44|L  21|L  24|
+   MI | 12923035 / R: 1436P23->1413     |N:4  |B    |W    |B    |W    |B    |W    |W    |
+```
+
+W 21 corresponds to pair num 21 with a pre-rating of 1563:
+
+```{}
+   21 | DINH DANG BUI                   |4.0  |W  43|L   1|W  47|L   3|W  40|W  39|L   6|
+   ON | 15495066 / R: 1563P22->1562     |N:3  |B    |W    |B    |W    |W    |B    |W    |
+```
+
+w 18 corresponds to pair num 18 with a pre-rating of 1600:
+
+```{}
+   18 | DAVID SUNDEEN                   |4.0  |W  47|W   9|L   1|W  32|L  19|W  38|L  10|
+   MI | 11342094 / R: 1600   ->1600     |N:3  |B    |W    |B    |W    |B    |W    |B    |
+```
+
+W 14 corresponds to pair num 14 with a pre-rating of 1610:
+
+```{}
+   14 | BRADLEY SHAW                    |4.5  |W  54|W  44|W   8|L   1|D  27|L   5|W  31|
+   MI | 10131499 / R: 1610   ->1618     |N:3  |W    |B    |W    |W    |B    |B    |W    |
+```
+
+W 7 corresponds to pair num 7 with a pre-rating of 1649:
+
+```{}
+    7 | GARY DEE SWATHELL               |5.0  |W  57|W  46|W  13|W  11|L   1|W   9|L   2|
+   MI | 11146376 / R: 1649   ->1673     |N:3  |W    |B    |W    |B    |B    |W    |W    |
+```
+
+D 12 corresponds to pair num 12 with a pre-rating of 1663:
+
+```{}
+   12 | KENNETH J TACK                  |4.5  |W  42|W  33|D   5|W  38|H    |D   1|L   3|
+   MI | 12681257 / R: 1663   ->1670     |N:3  |W    |B    |W    |B    |     |W    |B    |
+```
+
+D 4 corresponds to pair num 4 with a pre-rating of 1716:
+
+```{}
+    4 | PATRICK H SCHILLING             |5.5  |W  23|D  28|W   2|W  26|D   5|W  19|D   1|
+   MI | 12616049 / R: 1716   ->1744     |N:2  |W    |B    |W    |B    |W    |B    |B    |
+```
+
+Now, taking the total of the pre-ratings, we get 1436+1563+1600+1610+1649+1663+1716 = 11237 / 7 = 1605.  That matches up with the data frame above.
+
+```{r}
+  pre_ratings <- c(1436, 1563, 1600, 1610, 1649, 1663, 1716)
+  total <- sum(pre_ratings)
+  print(total)
+  average = mean(pre_ratings)
+  print(average)
+```
+
+
+## Creating the .csv file
+
+The .csv file will be created using the readr library and the write_csv function.
+
+```{r}
+# Load the library
+library(readr)
+
+# Grab the relevant columns and rename the titles for readability
+export_df <- tournament_df[order(tournament_df$pair_num), c("player_name", "state", "total_pts", "pre_rating", "avg_opp_rating")] |>
+  rename(
+    "Player Name" = "player_name",
+    "Player State" = "state",
+    "Total Number of Points" = "total_pts",
+    "Player Pre-Rating" = "pre_rating",
+    "Average Pre Chess Rating of Opponents" = "avg_opp_rating"
+  )
+
+head(export_df, 64)
+
+# Export the dataframe to a CSV file
+write_csv(export_df, file = "output_file_readr.csv")
+```
+
