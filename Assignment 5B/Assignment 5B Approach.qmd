@@ -1,0 +1,10 @@
+---
+title: "Assignment 5B Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+For this assignment, I will use the chess tournament information from Project 1 and calculate each player's expected score and the difference from their actual score.  From there, I will list the five players who overperformed the most relative to their expected score, as well as the five players that underperformed the most relative to their expected score.  I believe that the assignment may be challenging because I'm not very familiar with the ELO formulas but I will use the reference video as a guide.  I think the formula given in the reference video is a good start and should be reasonable for this assignment.  One hurdle with this assignment that I think may occur is just figuring out how to calculate each player's expected score.  Once that is figured out though, the rest of the assignment should flow nicely.
