@@ -1,0 +1,10 @@
+---
+title: "Assignment 5A Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+For this assignment, I plan to use the information provided in the table in order to create a .csv file. I will look into using a "wide" structure (rows with multiple columns).  I will use tidyr and dplyr to tidy and transform the data.  Once that's done, I will perform an analysis of the arrival delays for the two airlines.  I believe it will be a good learning experience with tidying data and transformations as I have not used tidyr in depth. Just from a glance, it looks like tidyr has to do with data structure and converting between a "long" and "wide" format.  I will use dplyr for the data manipulation. I think using a "wide" structure will be interesting to learn more about.
