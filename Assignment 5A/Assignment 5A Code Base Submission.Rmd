@@ -1,0 +1,169 @@
+---
+title: "Assignment 5A"
+author: "Long Lin"
+date: "2026-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+For this assignment, I will use the information provided in the table to create a .csv file. Then, I will use tidyr and dplyr to tidy and transform the data. Once that's done, I will perform an analysis of the arrival delays for the two airlines. I believe it will be a good learning experience with tidying data and data transformations. From a glance, tidyr has to do with data structure and will be useful for converting between a "long" and "wide" format. I will use dplyr for the data manipulation. I think using a "wide" structure and turning it into a "long" format will be interesting to learn about.
+
+To start off, I created a .csv file for the table and uploaded it to my personal github.
+
+Source: <https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%205A/Airline%20Delays%20-%20Sheet1.csv>
+
+## Creating a data frame
+
+I created a data frame from the csv file.
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(gt)
+
+url <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%205A/Airline%20Delays%20-%20Sheet1.csv"
+
+df <- read_csv(
+  file = url,
+  show_col_types = FALSE,
+  progress = FALSE
+)
+
+head(df)
+```
+
+I noticed there was an empty row in the data so I will remove the empty row and add names to the first couple columns as well.
+
+```{r}
+df <- df |> filter(!if_all(everything(), is.na)) |>
+  setNames(replace(names(df), 1:2, c("airline", "status")))
+head(df)
+```
+
+Looking at the data, there doesn't appear to be any missing data. Each Airline has a value for "on time" and "delayed" for each of the 5 destinations. If there was any values missing, we could replace the empty cell with 0. In order to simulate this, we'll create a dummy data frame with some values missing and then replace the empty cell with a 0 using dplyr.
+
+To create the dummy data frame, I set a seed to keep the sample() function consistent and then used the sample() function to replace 50% of the Los Angeles Column to NA.
+```{r}
+dummy_df <- df
+set.seed(85858)
+dummy_df$`Los Angeles`[sample(1:nrow(df), nrow(df) * 0.5)] <- NA
+
+head(dummy_df)
+```
+
+Next I went ahead and replaced the NA with 0s.
+```{r}
+dummy_df <- dummy_df |>
+  mutate(`Los Angeles` = replace_na(`Los Angeles`, 0)) # Replace NA with 0
+
+head(dummy_df)
+```
+
+Going back to the original data, I'll convert the data frame from a wide to a long format using the tidyr package and the pivot_longer() function.
+
+```{r}
+df <- df |>
+  tidyr::fill(airline, .direction = "down") |>
+  mutate(status = tolower(status), 
+         status = ifelse(status %in% c("on time","on time"), "on_time", status)
+  )
+
+destination_columns <- setdiff(names(df), c("airline","status"))
+
+long_df <- df |>
+  pivot_longer(all_of(destination_columns), names_to = "destination", values_to = "count") |>
+  mutate(count = as.numeric(count))
+head(long_df, 20)
+```
+
+Next I'll calculate the percentage of delays for each destination and display the results in a table.
+
+```{r}
+# percentage of delayed flights for each destination
+delay_destination <- long_df |>
+  group_by(airline, destination, status) |>
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = status, values_from = count, values_fill = 0) |>
+  mutate(
+    total_count = delayed + on_time, 
+    percent_delayed = ifelse(total_count > 0, 100 * delayed / total_count, NA_real_)
+    )
+
+delay_destination |>
+  gt() |>
+  cols_label(
+    airline = "Airline",
+    destination = "Destination",
+    delayed = "Delayed",
+    on_time = "On Time",
+    total_count = "Total",
+    percent_delayed = "Percent Delayed"
+  ) |>
+  tab_header(
+    title = "Airline Delays",
+  )
+```
+
+Next I'll calculate the percentage of delays for each airline and display them in a table.
+
+```{r}
+# percentage of total delayed flights
+delay_airline <- delay_destination |>
+  group_by(airline) |>
+  summarise(
+    delayed = sum(delayed), on_time = sum(on_time),
+    total_count = delayed + on_time,
+    percent_delayed = 100 * delayed / total_count,
+    .groups = "drop"
+  )
+
+delay_airline |>
+  gt() |>
+  cols_label(
+    airline = "Airline",
+    delayed = "Delayed",
+    on_time = "On Time",
+    total_count = "Total",
+    percent_delayed = "Percent Delayed"
+  ) |>
+  tab_header(
+    title = "Airline Delays",
+  )
+```
+
+Next I'll create a plot for the delays percentage for each destination using ggplot.
+
+```{r}
+ggplot(delay_destination, aes(x = destination, y = percent_delayed, fill = airline)) +
+  geom_col(position = position_dodge(width = 0.7)) +
+  geom_text(
+    aes(label = round(percent_delayed, 1)),  # Rounding for cleanliness
+    position = position_dodge(width = 0.7),  # MUST match the geom_col width
+    vjust = -0.5,                            # Move text slightly above the bar
+    size = 3.5                               # Adjust font size as needed
+  ) +
+  labs(title = "Percentage of Delayed Flights by Destination", x = "Destination", y = "Percent Delayed")
+```
+
+Next I'll create a plot for the delays percentage for each airline using ggplot.
+
+```{r}
+ggplot(delay_airline, aes(airline, percent_delayed, fill = airline)) +
+  geom_col() +
+  geom_text(
+    aes(label = round(percent_delayed, 1)), 
+    vjust = -0.5,   # Positions the text just above the top of the bar
+    size = 4        # Adjusts the text size
+  ) +
+  labs(title = "Percentage of Delayed Flights", x = "Airline", y = "Percent Delayed")
+```
+
+## Conclusion
+
+Looking at the two plots, we can see that the percentage of delays for each of the destinations is higher for AM WEST compared to ALASKA but the percentage of delays for the AM WEST airline altogether is lower than that of ALASKA. This is the Simpson's paradox where the relationship between variables in separate groups reverses when you take the data as a whole. In this case, ALASKA has a higher percentage of delays in total even though they have a lower rate of delays for each destination compared to AM WEST.
