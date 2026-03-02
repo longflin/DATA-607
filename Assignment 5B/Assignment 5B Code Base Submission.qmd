@@ -1,0 +1,208 @@
+---
+title: "Assignment 5B ELO Calculations"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this assignment, I will use the chess tournament information from Project 1 and calculate each player's expected score and the difference from their actual score. From there, I will list the five players who overperformed the most relative to their expected score, as well as the five players that underperformed the most relative to their expected score. I think the formula given in the reference video is a good start and should be reasonable for this assignment.
+
+source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%205B/tournamentinfo.txt
+
+## The Process
+
+I will start with creating a data frame from the chess tournament information provided in project 1.
+```{r}
+library(tidyverse)
+library(gt)
+
+# 1. Load the raw text
+raw_lines <- readLines("https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%205B/tournamentinfo.txt")
+
+# 2. Remove dashes and empty lines
+clean_lines <- raw_lines[!grepl("^-+$", raw_lines) & nzchar(raw_lines)]
+
+# 3. Skip the header (first 2 lines of the remaining text)
+data_lines <- clean_lines[3:length(clean_lines)]
+
+# 4. Separate the two-row structure
+# Every odd line is a "Name" row, every even line is a "ID/Rating" row
+name_rows <- data_lines[seq(1, length(data_lines), by = 2)]
+info_rows <- data_lines[seq(2, length(data_lines), by = 2)]
+
+# 5. Parse the Name Rows (Fixed Width)
+# Column positions: Pair Num (1-5), Name (9-40), Total Pts (36-40), Rounds (42-end)
+names_df <- data.frame(
+  pair_num = as.numeric(str_sub(name_rows, 1, 5)),
+  player_name = str_trim(str_sub(name_rows, 9, 40)),
+  total_pts = as.numeric(str_sub(name_rows, 42, 44)),
+  stringsAsFactors = FALSE
+)
+
+# 6. Parse the Info Rows (Extracting State and Pre-Rating)
+info_df <- data.frame(
+  state = str_trim(str_sub(info_rows, 1, 5)),
+  uscf_id = str_extract(info_rows, "\\d{8}"),
+  pre_rating = as.numeric(str_extract(info_rows, "(?<=R: )\\s*\\d+")),
+  stringsAsFactors = FALSE
+)
+
+# 7. Merge names with info
+tournament_df <- cbind(names_df, info_df)
+
+head(tournament_df, 100)
+```
+For the round data, I created a data frame called opponents_df and stored the rounds as well as the opponent_pre_rating for each round.
+```{r}
+# Extract the string containing the rounds
+rounds_raw <- str_sub(name_rows, 42, -1)
+
+# Extract just the digits (Opponent Pair Numbers)
+# We use str_extract_all to get every number in the row
+opponents_list <- str_extract_all(rounds_raw, "(?<=[WLD])\\s*\\d+")
+
+# Convert the list into a data frame where each row is a game
+opponents_df <- data.frame(
+  pair_num = rep(tournament_df$pair_num, lengths(opponents_list)),
+  opponent_id = as.numeric(unlist(opponents_list))
+)
+
+#Grab the opponent's pre rating from the tournament_df
+opponents_df$opponent_pre_rating <- tournament_df$pre_rating[match(opponents_df$opponent_id, tournament_df$pair_num)]
+
+head(opponents_df)
+```
+Once I parsed the data from the tournamentinfo.txt file, I created a matches data frame by taking the opponents_df and adding the pre_rating value associated with each pair_num in the opponents_df using a left_join.
+```{r}
+matches_df <- opponents_df |>
+  left_join(
+    tournament_df |> select(pair_num, pre_rating),
+    by = "pair_num"
+  ) |>
+  relocate(pre_rating, .after = pair_num)
+head(matches_df, 10)
+```
+In order to calculate the expected score, I'll use the formula from singingbanana's video "The ELO Rating System for Chess and Beyond".
+
+singingbanana. (2019, February 15). The Elo Rating System for Chess and Beyond [Video]. YouTube. https://www.youtube.com/watch?v=AsYfbmp0To0
+
+P(A wins) = 1/(1+(10^((RB-RA)/400)))
+
+I used the formula to add another column of the expected_score for each match.
+```{r}
+matches_df <- matches_df |>
+  mutate(expected_score = 1 / (1 + (10^((opponent_pre_rating - pre_rating) / 400))))
+
+head(matches_df)
+```
+Next I calculated the expected points for each player by adding up all the expected scores for each pair_num.
+```{r}
+expected_points_df <- matches_df |>
+  group_by(pair_num) |>
+  summarise(expected_points = sum(expected_score), .groups = "drop")
+
+head(expected_points_df)
+```
+Next I calculated the differential between the player's total points and their expected points.
+```{r}
+differential_df <- tournament_df |>
+  left_join(expected_points_df, by = "pair_num") |>
+  mutate(
+    differential = total_pts - expected_points
+  )
+
+head(differential_df)
+```
+In order to get the top 5 overperformers, I used dplyr's arrange function to arrange the list in descending order and then used the head function to grab the top 5.
+```{r}
+overperformed_df <- differential_df |>
+  arrange(desc(differential))
+
+top5_overperformers <- head(overperformed_df, 5)
+
+top5_overperformers |>
+  gt() |>
+  cols_label(
+    pair_num = "Pair Number",
+    player_name = "Player Name",
+    total_pts = "Total Pts",
+    state = "State",
+    uscf_id = "USCF ID",
+    pre_rating = "Pre-rating",
+    expected_points = "Expected Pts",
+    differential = "Differential"
+  ) |>
+  tab_header(
+    title = "Top 5 Overperformers",
+  )
+```
+In order to get the top 5 underperformers, I used dplyr's arrange function to arrange the list in the default ascending order and then used the head function to grab the top 5.
+```{r}
+underperformed_df <- differential_df |>
+  arrange(differential)
+
+top5_underperformers <- head(underperformed_df, 5)
+
+top5_underperformers |>
+  gt() |>
+  cols_label(
+    pair_num = "Pair Number",
+    player_name = "Player Name",
+    total_pts = "Total Pts",
+    state = "State",
+    uscf_id = "USCF ID",
+    pre_rating = "Pre-rating",
+    expected_points = "Expected Pts",
+    differential = "Differential"
+  ) |>
+  tab_header(
+    title = "Top 5 Underperformers",
+  )
+```
+
+Finally  I checked my work by hand calculating to see if it was correct.  I used Gary Hua for the calculation.
+
+```{r}
+tournament_df |>
+  filter(pair_num == 1)
+
+opponents_df |>
+  filter(pair_num ==1)
+
+#opponent 39
+expected_score39 = 1 / (1 + (10^((1436 - 1794) / 400)))
+
+#opponent 21
+expected_score21 = 1 / (1 + (10^((1563 - 1794) / 400)))
+
+#opponent 18
+expected_score18 = 1 / (1 + (10^((1600 - 1794) / 400)))
+
+#opponent 14
+expected_score14 = 1 / (1 + (10^((1610 - 1794) / 400)))
+
+#opponent 7
+expected_score7 = 1 / (1 + (10^((1649 - 1794) / 400)))
+
+#opponent 12
+expected_score12 = 1 / (1 + (10^((1663 - 1794) / 400)))
+
+#opponent 4
+expected_score4 = 1 / (1 + (10^((1716 - 1794) / 400)))
+
+expected_gary_hua = sum(expected_score39, expected_score21, expected_score18, expected_score14, expected_score7, expected_score12, expected_score4)
+
+expected_gary_hua
+
+expected_points_df |> filter(pair_num == 1)
+```
+Hand calculating for Gary Hua resulted in an expected score of 5.161574 while the algorithm resulted in the same number so it is correct.
+
+
+
+
+## Conclusion
+
+The ELO formula provided by singingbanana's youtube video was reliable in calculating each player's expected score.  In the end I was able to find the top 5 overperformers and the top 5 underperformers.  I was also able to verify the accuracy of the expected score by comparing GARY HUA's score with my own hand calculations.
