@@ -1,0 +1,10 @@
+---
+title: "Project 2 Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+For this project, I plan on using three different datasets from the Week 5 Discussion 5A post. With these three datasets, I will prepare each of them by creating a .csv file, importing and tidying the data, and performing an analysis on the dataset. I will make sure that the code within the Quarto Markdown file is reproducible. I think this project is very similar to previous assignments that we've done so I am eager to see what I've learned from those assignments and implementing the process within this project. I plan to use a similar process to what we did in Assignment 5A with the Airline Delays, as I feel like that is very similar assignment to this. One of the challenges with this project might be performing the specific analysis requested in each discussion item.  Like, in a case, where the information is not sufficient enough for the specified analysis.  After learning about Simpson's Paradox, I will also check to see if that is present during any of these analyses.
