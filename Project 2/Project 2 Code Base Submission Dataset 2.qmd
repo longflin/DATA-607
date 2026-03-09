@@ -1,0 +1,94 @@
+---
+title: "Project 2 Code Base Submission Dataset 2"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this project, I used three different datasets from the Week 5 Discussion 5A post. With these three datasets, I prepared each of them by creating a .csv file and importing the data. Then I worked on tidying the data, and performing an analysis on the dataset. I also made sure that the code within the Quarto Markdown file is reproducible in a clean environment. I used a similar process to what we did in Assignment 5A with the Airline Delays, as I feel like that is very similar assignment to this.
+
+## Dataset 2:
+
+Generational Takeout Spending posted by Kiera Griffiths
+
+source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/Untidy%20Generational%20Takeout%20Spending.csv
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(gt)
+
+generational_spending_url <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/Untidy%20Generational%20Takeout%20Spending.csv"
+
+generational_spending_df <- read_csv(
+  file = generational_spending_url,
+  show_col_types = FALSE,
+  progress = FALSE
+)
+
+head(generational_spending_df)
+```
+I fixed the missing values in this dataset by replacing them with 0 using the following code chunk.
+```{r}
+generational_spending_df <- generational_spending_df |>
+  mutate(across("Jan.2025":"Jun.2025", ~replace_na(.x, 0)))
+
+head(generational_spending_df)
+```
+I converted the data from a wide data format to a long data format using pivot_longer.
+```{r}
+long_generational_spending_df <- generational_spending_df |>
+  pivot_longer(
+    cols = c("Jan.2025", "Feb.2025", "Mar.2025", "Apr.2025", "May.2025", "Jun.2025"),
+    names_to = "Month",
+    values_to = "Average Takeout Spending"
+  )
+head(long_generational_spending_df, 20)
+```
+I filtered the data for January 2025 using the following code chunk.  Then I created a table for the January 2025 data.
+```{r}
+Jan_only_df <- long_generational_spending_df |>
+  filter(`Month` == 'Jan.2025')
+head(Jan_only_df, 20)
+
+Jan_only_df |>
+  gt() |>
+  cols_hide(columns = c(`Month`)) |>
+  tab_header(
+    title = "Average Monthly Takeout Spending by Generation in Jan 2025",
+  )
+```
+I created a bar graph for the January 2025 data using the following code chunk.
+```{r}
+ggplot(Jan_only_df, aes(x = Generation, y = `Average Takeout Spending`)) +
+  geom_col(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Generational Average Monthly Takeout Spending in Jan 2025")
+```
+Based on the plot for January's Data, we can see that Millenials spend the most on average for takeout in January 2025 and the Silent Gen spends the least on average for takeout in January 2025.
+
+
+Next I filtered the data for June 2025 using the following code chunk. Then I created another table for the June 2025 data.
+```{r}
+Jun_only_df <- long_generational_spending_df |>
+  filter(`Month` == 'Jun.2025')
+head(Jun_only_df, 20)
+
+Jun_only_df |>
+  gt() |>
+  cols_hide(columns = c(`Month`)) |>
+  tab_header(
+    title = "Average Monthly Takeout Spending by Generation in June 2025",
+  )
+```
+Next I created a bar graph for the June 2025 data using the following code chunk.
+```{r}
+ggplot(Jun_only_df, aes(x = Generation, y = `Average Takeout Spending`)) +
+  geom_col(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Generational Average Monthly Takeout Spending in June 2025")
+```
+From this plot for June's Data, we can see that Millenials still spend the most on average for takeout in January 2025 and the Silent Gen still spends the least on average for takeout in June 2025.

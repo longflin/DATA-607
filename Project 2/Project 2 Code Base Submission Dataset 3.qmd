@@ -1,0 +1,144 @@
+---
+title: "Project 2 Code Base Submission Dataset 3"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this project, I used three different datasets from the Week 5 Discussion 5A post. With these three datasets, I prepared each of them by creating a .csv file and importing the data. Then I worked on tidying the data, and performing an analysis on the dataset. I also made sure that the code within the Quarto Markdown file is reproducible in a clean environment. I used a similar process to what we did in Assignment 5A with the Airline Delays, as I feel like that is very similar assignment to this.
+
+## Dataset 3: 
+
+World GDP by Country: 1960-2022 posted by Sinem Kilicdere
+
+source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/World%20GDP%20by%20Country%201960-2022.csv
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(gt)
+
+world_GDP_url <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/World%20GDP%20by%20Country%201960-2022.csv"
+
+world_GDP_df <- read_csv(
+  file = world_GDP_url,
+  show_col_types = FALSE,
+  progress = FALSE
+)
+
+head(world_GDP_df)
+```
+I fixed the missing values in this dataset by replacing them with 0 using the following code chunk.
+```{r}
+world_GDP_df <- world_GDP_df |>
+  mutate(across("1960":"2022", ~replace_na(.x, 0)))
+
+head(world_GDP_df)
+```
+I converted the data from a wide data format to a long data format using pivot_longer.
+```{r}
+long_world_GDP_df <- world_GDP_df |>
+  pivot_longer(
+    cols = c("1960":"2022"),
+    names_to = "Year",
+    values_to = "GDP"
+  )
+head(long_world_GDP_df, 70)
+```
+Next I filtered the data for US only data using the following code chunk.  I also converted the GDP value to billions by dividing the value by 1000000000.
+```{r}
+US_only_GDP_df <- long_world_GDP_df |>
+  filter(`Country` == 'United States')
+head(US_only_GDP_df, 70)
+
+US_only_GDP_df <- US_only_GDP_df |>
+  mutate(GDP = as.numeric(GDP) / 1000000000)
+
+US_only_GDP_df |>
+  gt() |>
+  cols_hide(columns = c(`Country`, `Country Code`)) |>
+  tab_header(
+    title = "US GDP by Year (billions)",
+  )
+```
+I created a line chart for the US GDP data using the following code chunk.  This was done so that it is easier to see trends.
+```{r}
+library(ggplot2)
+
+ggplot(US_only_GDP_df, aes(x = as.numeric(Year), y = GDP)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = seq(1960, 2022, by = 10)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "US GDP Over Time",
+    subtitle = "GDP (billions)",
+    x = "Year",
+    y = "GDP (millions)",
+    color = "Region"
+  )
+```
+
+The plot for the US' GDP trends upwards between 1960 and 2022.
+
+Next I created a data frame of China's GDP data by using a filter.  I also converted the GDP into billions for China's values by dividing the GDP value by 1000000000.  Then I created a table of the values for the Year and GDP columns.
+```{r}
+China_only_GDP_df <- long_world_GDP_df |>
+  filter(`Country` == 'China')
+head(US_only_GDP_df, 70)
+
+China_only_GDP_df <- China_only_GDP_df |>
+  mutate(GDP = as.numeric(GDP) / 1000000000)
+
+China_only_GDP_df |>
+  gt() |>
+  cols_hide(columns = c(`Country`, `Country Code`)) |>
+  tab_header(
+    title = "China GDP by Year (billions)",
+  )
+```
+I created a line chart for China's GDP data using the following code chunk.  This was done so that it is easier to see trends.
+```{r}
+library(ggplot2)
+
+ggplot(China_only_GDP_df, aes(x = as.numeric(Year), y = GDP)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = seq(1960, 2022, by = 10)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "China GDP Over Time (billions)",
+    x = "Year",
+    y = "GDP (billions)",
+    color = "Region"
+  )
+```
+
+The plot for China's GDP also trends upwards between 1960 and 2022.
+
+Finally, I created a plot for both US and China's GDP data in order to make it easier to compare both countries together.
+```{r}
+US_only_GDP_df <- US_only_GDP_df |>
+  mutate(Source = "US")
+
+China_only_GDP_df <- China_only_GDP_df |>
+  mutate(Source = "China")
+
+combined_df <- bind_rows(US_only_GDP_df, China_only_GDP_df) 
+
+ggplot(combined_df, aes(x = as.numeric(Year), y = GDP, color = Source, group = Source)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = seq(1960, 2022, by = 10)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "China GDP Over Time (billions)",
+    x = "Year",
+    y = "GDP (billions)",
+    color = "Region"
+  )
+```
+Combining the plots for the US and China shows that the US' GDP grows at a faster rate than China's GDP.

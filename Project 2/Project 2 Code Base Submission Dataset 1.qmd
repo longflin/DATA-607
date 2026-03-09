@@ -1,0 +1,84 @@
+---
+title: "Project 2 Code Base Submission Dataset 1"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this project, I used three different datasets from the Week 5 Discussion 5A post. With these three datasets, I prepared each of them by creating a .csv file and importing the data. Then I worked on tidying the data, and performing an analysis on the dataset. I also made sure that the code within the Quarto Markdown file is reproducible in a clean environment. I used a similar process to what we did in Assignment 5A with the Airline Delays, as I feel like that is very similar assignment to this.
+
+## Dataset 1: 
+
+Birth Rate by Countries posted by Brandon Chanderban
+
+source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/Birth_Rates_of_Countries.csv
+
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(gt)
+
+birth_rate_url <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Project%202/Birth_Rates_of_Countries.csv"
+
+birth_rate_df <- read_csv(
+  file = birth_rate_url,
+  show_col_types = FALSE,
+  progress = FALSE,
+  skip = 4
+)
+
+head(birth_rate_df)
+```
+I converted the data from a wide format to a long format using pivot_longer in the following code chunk.
+```{r}
+long_birth_rate_df <- birth_rate_df |>
+  pivot_longer(
+    cols = c("1960":"2022"),
+    names_to = "Year",
+    values_to = "Birth Rate"
+  )
+head(long_birth_rate_df, 70)
+```
+
+I replaced missing values with 0 with the following code chunk.
+
+```{r}
+long_birth_rate_remove_na_df <- long_birth_rate_df |>
+  mutate(`Birth Rate` = replace_na(`Birth Rate`, 0))
+
+head(long_birth_rate_remove_na_df, 70)
+```
+I filtered the data for US only data using the following code chunk.  Then I displayed the US only data in a table.
+```{r}
+US_only_df <- long_birth_rate_remove_na_df |>
+  filter(`Country Name` == 'United States')
+head(US_only_df, 70)
+
+US_only_df |>
+  gt() |>
+  cols_hide(columns = c(`Country Name`, `Country Code`, `Indicator Name`, `Indicator Code`)) |>
+  tab_header(
+    title = "Birth rates in the US (per 1,000 people)",
+  )
+```
+I created a line chart for the US birth rate data using the following code chunk.  This was done to make it easier to see trends.
+```{r}
+library(ggplot2)
+
+ggplot(US_only_df, aes(x = as.numeric(Year), y = `Birth Rate`)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = seq(1960, 2022, by = 10)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(
+    title = "US Birth Rate Trends Over Time",
+    subtitle = "Annual births per 1,000 persons",
+    x = "Year",
+    y = "Birth Rate",
+    color = "Region"
+  )
+```
+From this plot, we are able to see that the US has been on a downward trend in crude birth rates between the year 1960 and 2022.
