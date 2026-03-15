@@ -1,0 +1,89 @@
+---
+title: "Assignment 7"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this assignment, I choose 3 books on investing.
+
+------------------------------------------------------------------------
+
+In Pursuit of the Perfect Portfolio By Andrew W. Lo and Stephen R. Foerster
+
+Market Wizards: Interviews with Top Traders By Jack D. Schwager
+
+The Super Traders By Alan Rubenfeld
+
+------------------------------------------------------------------------
+
+
+First I created both the HTML and json files of the book's information manually by hand.  Then I uploaded both of them onto my GitHub.
+
+HTML file source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%207/books.html
+
+JSON file source: https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%207/books.json
+
+## HTML File
+
+For the HTML file, I used the rvest library and the read_html function to grab the table from the source endpoint.  Once I got the HTML content, I grabbed the table within and parsed the table's content into the books_html_df data frame.
+
+```{r}
+library(tidyverse)
+library(rvest)
+
+htmlsource <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%207/books.html"
+html_content <- read_html(htmlsource)
+
+# Select the table and convert it
+# 'header = TRUE' ensures the <th> tags become your column names
+books_html_df <- html_content %>%
+  html_element("table") %>%
+  html_table(header = TRUE)
+
+print(books_html_df)
+```
+
+## JSON File
+
+For the .json file, I used the jsonlite library and the fromJSON function to grab the contents of the .json file from my source endpoint and parse it into the books_json_df data frame.
+
+```{r}
+library(jsonlite)
+
+jsonsource <- "https://raw.githubusercontent.com/longflin/DATA-607/refs/heads/main/Assignment%207/books.json"
+books_json_df <- fromJSON(jsonsource)
+
+print(books_json_df)
+```
+
+
+## Comparison
+
+In order to check if the two data frames are identical, I first used the `isIdentical` function.
+
+```{r}
+isIdentical <- identical(books_html_df, books_json_df)
+
+isIdentical
+```
+The `isIdentical` function gave a FALSE result meaning the two data frames are not identical, so I used the `comparison` function to get additional information on the differences.
+
+```{r}
+comparison <- all.equal(books_html_df, books_json_df)
+print(comparison)
+```
+Looking at the comparison result, it looks like are 6 string mismatches so I used another library called waldo and the function within it called `compare` to show visual differences between the two files.
+
+```{r}
+library(waldo)
+
+compare(books_html_df, books_json_df)
+```
+Looking at the results, it looks like there are some format differences between the two file types.  The HTML file uses `Title` while the json file uses `title`.  The authors in the HTML data frame are also stored in a character vector while the authors in the JSON dataframe are stored in a list.  The information in each of the data frames may be similar but are not identical.
+
+## Conclusion
+
+Using the various comparisons above, we can see that the two data frames are not identical even though they provide information that may look similar.  This is partly due to different formatting norms in each file type.  In JSON, the attributes are lower camel case which means that they start with a lowercase letter (ex. `title`) while in the HTML table, they start with an uppercase (ex. `Title`).  Another difference is how the multiple authors are handled for the first book (In Pursuit of the Perfect Portfolio).  In JSON, the two authors are contained in an array.  In HTML, the group of authors are within a single string separated by a comma.  All in all, this is an interesting assignment showing how you have to take into account different formats for different file types.
