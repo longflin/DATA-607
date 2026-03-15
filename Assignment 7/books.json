@@ -1,0 +1,26 @@
+[
+  {
+    "title": "In Pursuit of the Perfect Portfolio",
+    "authors": ["Andrew W. Lo", "Stephen R. Foerster"],
+    "year": 2023,
+    "publisher": "Princeton University Press",
+    "language": "English",
+    "page_count": 416
+  },
+  {
+    "title": "Market Wizards: Interviews with Top Traders",
+    "authors": ["Jack D. Schwager"],
+    "year": 2016,
+    "publisher": "Wiley",
+    "language": "English",
+    "page_count": 480
+  },
+  {
+    "title": "The Super Traders",
+    "authors": ["Alan Rubenfeld"],
+    "year": 1995,
+    "publisher": "Probus Professional Pub.",
+    "language": "English",
+    "page_count": 259
+  }
+]
