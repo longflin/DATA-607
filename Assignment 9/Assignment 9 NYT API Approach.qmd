@@ -1,0 +1,10 @@
+---
+title: "Assignment 9 Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+For this assignment, I will have to use a New York Times API endpoint to aid in data analysis. I think this is a great chance to learn how to properly use public APIs to access valuable data. I've gone ahead and setup a developer account for the NYT API. I think for the actual analysis, I will use the API to figure out the most recent best sellers via the `Books API`. Challenges with this assignment might include some initial parsing error handling for the data that is sent from the API. I don't think there will be much issue with tidying up the data because we have had plenty of practice with that in the class already.
