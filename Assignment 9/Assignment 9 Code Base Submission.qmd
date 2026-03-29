@@ -1,0 +1,60 @@
+---
+title: "Assignment 9 Code Base Submission"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this assignment, I used the public New York Times API endpoint for `books` to aid in data analysis. Using the API, I wanted to figure out the most recent best sellers for paperback nonfiction books via the Books API. I choose this because I don't read often, but when I have free time, I enjoy an occasional nonfiction book.
+
+To start off, I made a request to the `https://api.nytimes.com/svc/books/v3/lists/2026-03-29/paperback-nonfiction.json` endpoint. To access the endpoint, I appended my api key to the end of the call in order to authenticate the request. I used the `httr2` library and the `request` function to do this. I also stored my api key as a environment variable because it is bad practice to hard code the api key in the code chunk.  The endpoint returns a response that includes the best seller list for paperback nonfiction books on March 29, 2026.
+
+```{r}
+library(httr2)
+library(jsonlite)
+library(tidyverse)
+
+my_key <- Sys.getenv("NYT_API_KEY")
+
+req <- request(paste0("https://api.nytimes.com/svc/books/v3/lists/2026-03-29/paperback-nonfiction.json?api-key=", my_key))
+
+resp <- req_perform(req)
+```
+
+With the response from the api, I used the `resp_body_json()` function to unpack the data in the response into a standard R list. From there, I was able to go into the nested `results` variable within and then the `books` variable within the results to get a list of the books.
+
+```{r}
+resp_list <- resp |> resp_body_json()
+
+results <- resp_list$results
+
+books <- results$books
+```
+
+Next, I created a `books_df` data frame from the list of books by using the `tibble` and `unnest_wider` functions. From there, I also cleaned up the names of the columns by removing the `data_` prefix by using the `gsub` function.
+
+```{r}
+books_df <- tibble(data = books) |>
+  unnest_wider(data, names_sep = "_")
+
+colnames(books_df) <- gsub("data_", "", colnames(books_df))
+
+head(books_df)
+```
+
+Finally, I created a new data frame with only the columns that I was interested in by using the `select` function in the `dplyr` library. I selected the `rank`, `title`, `author`, and `publisher` columns for the new data frame.
+
+```{r}
+library(dplyr)
+
+paperback_nonfiction_bestsellers <- books_df |>
+  select(rank, title, author, publisher)
+
+head(paperback_nonfiction_bestsellers, 50)
+```
+
+## Conclusion
+
+During this assignment, I had to figure out how to deal with the nested data that the API returned.  In order to do this, I used the `unnest_wider` function to create a data frame from the `books` variable of the `results` variable in the response.  This created a lot of columns with missing data but I was not interested in those specific columns.  To make it tidy, I created another data frame that included only the columns that I wanted and was interested in.  The final data frame shows the rank, title, author, and publisher of the book.
