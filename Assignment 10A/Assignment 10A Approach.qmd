@@ -1,0 +1,10 @@
+---
+title: "Assignment 10A Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+After reading the chapters in `Text Mining with R`, I will first work on getting the example from Chapter 2 running first. I think the example in Chapter 2 made it clear on what sentiment analysis is and how to do it.  The process involves transforming the data into tidy format and then using an inner join to do the analysis. From there, there are 3 different lexicons being used for calculating sentiment. Following along, `count()` is then used for determining the impact that each word had on the overall sentiment. In the end, the results are displayed in a wordcloud.  I don't think I will have too much trouble getting the example working.  Once that is working, I plan to look at news articles that deal with AI to see how the resulting wordcloud differs from the primary example in Chapter 2.
