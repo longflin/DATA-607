@@ -1,0 +1,19 @@
+---
+title: "Assignment 10B Approach"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Approach
+
+For this assignment, I plan on using both of the public APIs provided by the Nobel Prize organization to investigate areas of personal interest with the Nobel Prize.  I think there are a lot of questions that sound interesting involving the Nobel Prize.
+
+My tentative questions (subject to change) are:
+
+1. What are the category breakdowns for Nobel Prizes won by people from the US?
+2. What countries have the greatest rate of improvement over the last 5 years?
+3. What countries have the greatest rate of decline over the last 5 years?
+4. How does the US and China compare to each other with regards to number of awards in the last decade?
+
+In order to answer these questions, I will tidy and transform the data retrieved from the Nobel Prize APIs.  From there, I will work on displaying the results in a clear format.  From an initial standpoint, I believe it should be a straightforward task but I'm sure there were be problems I have not foreseen.
