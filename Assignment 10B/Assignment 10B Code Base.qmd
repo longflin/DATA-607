@@ -1,0 +1,219 @@
+---
+title: "Assignment 10B Code Base"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+For this assignment, I used the public APIs provided by the Nobel Prize organization to investigate areas of personal interest with the Nobel Prize. I think there are a lot of questions that sound interesting involving the Nobel Prize.
+
+My chosen questions are:
+
+What are the category breakdowns for Nobel Prizes won by people born in the US?
+
+What countries have the greatest rate of improvement over the last decade compared to the previous decade?
+
+What countries have the greatest rate of decline over the last decade compared to the previous decade?
+
+How does the West and East compare to each other with regards to number of awards in the last decade?
+
+In order to answer these questions, I will tidy and transform the data retrieved from the Nobel Prize APIs. From there, I will work on displaying the results in a clear format.
+
+## Reading in the data
+
+I used `fromJSON` to read in the Nobel Prize data from their public API.  I used `unnest` and `filter` to tidy the raw data.
+
+```{r}
+library(tidyverse)
+library(jsonlite)
+
+url <- "https://api.nobelprize.org/2.1/laureates?limit=2000"
+raw_data <- fromJSON(url, flatten = TRUE)
+
+laureates_tidy <- as_tibble(raw_data$laureates) %>%
+  filter(!is.na(gender)) %>% 
+  unnest(nobelPrizes, names_sep = "_")
+```
+
+
+## What are the category breakdowns for Nobel Prizes won by people born in the US?
+
+In order to answer this question, I filtered the tidy dataset by the `birth.place.country.en` variable for `USA|United States`. From there, I grouped them by `nobelPrizes_category.en` and used `summarise` to count the number of prizes by category and then used `arrange` to sort the data in descending order.
+
+```{r}
+us_breakdown <- laureates_tidy %>%
+  filter(str_detect(birth.place.country.en, "USA|United States")) %>%
+  group_by(nobelPrizes_category.en) %>%
+  summarise(total_prizes = n()) %>%
+  arrange(desc(total_prizes))
+```
+
+Next I plotted the data using `ggplot` to show the data in a flipped bar chart.
+
+```{r}
+library(ggplot2)
+
+ggplot(us_breakdown, aes(x = reorder(nobelPrizes_category.en, total_prizes), y = total_prizes)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "US Nobel Prizes by Category",
+       x = "Category",
+       y = "Number of Prizes")
+```
+
+## What countries have the greatest rate of improvement over the last decade compared to the previous decade?
+
+In order to calculate the rate of improvement, I first initialized the years for each decade.
+
+```{r}
+recent_decade <- 2017:2026
+past_decade <- 2007:2016
+```
+
+Then I filtered the Nobel prizes based on the `year`.
+
+```{r}
+improvement_filtered <- laureates_tidy %>%
+  mutate(year = as.numeric(nobelPrizes_awardYear)) %>% 
+  filter(year %in% c(recent_decade, past_decade)) %>%
+  mutate(period = ifelse(year %in% recent_decade, "Recent_Decade", "Past_Decade"))
+```
+
+Next I grouped the Nobel Prizes based on the `birth.place.country.en` and `period`.
+
+```{r}
+improvement_counts <- improvement_filtered %>%
+  group_by(birth.place.country.en, period) %>%
+  summarise(count = n(), .groups = "drop")
+```
+
+Next I used `pivot_wider` so that each period has its own column in order to store the count of Nobel Prizes during that period.
+
+```{r}
+improvement_wide <- improvement_counts %>%
+  pivot_wider(names_from = period, 
+              values_from = count, 
+              values_fill = 0)
+```
+
+Next I calculated the change by subtracting the `Past_Decade` from the `Recent_Decade` and arranged it in descending order.
+
+```{r}
+improvement_20yr <- improvement_wide %>%
+  mutate(change = Recent_Decade - Past_Decade) %>%
+  arrange(desc(change))
+```
+
+Finally, I used `head` to display the top 5 countries that had the greatest rate of improvement over the last decade compared to the previous decade.
+
+```{r}
+head(improvement_20yr, 5)
+```
+
+
+## What countries have the greatest rate of decline over the last decade compared to the previous decade?
+
+In order to calculate the rate of decline, I first initialized the years for each decade.
+
+```{r}
+recent_decade <- 2017:2026
+past_decade <- 2007:2016
+```
+
+Then I filtered the Nobel prizes based on the `year`.
+
+```{r}
+decline_filtered <- laureates_tidy %>%
+  mutate(year = as.numeric(nobelPrizes_awardYear)) %>% 
+  filter(year %in% c(recent_decade, past_decade)) %>%
+  mutate(period = ifelse(year %in% recent_decade, "Recent_Decade", "Past_Decade"))
+```
+
+Next I grouped the Nobel Prizes based on the `birth.place.country.en`.
+
+```{r}
+decline_counts <- decline_filtered %>%
+  group_by(birth.place.country.en, period) %>%
+  summarise(count = n(), .groups = "drop")
+```
+
+Next I used `pivot_wider` so that each period has its own column in order to store the count of Nobel Prizes during that period.
+
+```{r}
+decline_wide <- decline_counts %>%
+  pivot_wider(names_from = period, 
+              values_from = count, 
+              values_fill = 0)
+```
+
+Next I calculated the change by subtracting the `Past_Decade` from the `Recent_Decade`.
+
+```{r}
+decline_20yr <- decline_wide %>%
+  mutate(change = Recent_Decade - Past_Decade) %>%
+  arrange(change)
+```
+
+Finally, I used `head` to display the top 5 countries that had the greatest rate of decline over the last decade compared to the previous decade.
+
+```{r}
+head(decline_20yr, 5)
+```
+
+
+## How does the West and East compare to each other with regards to number of awards in the last decade?
+
+In order to answer this question, I first defined what the West and East consisted of in terms of countries.
+
+```{r}
+west <- c("USA", "United States", "United Kingdom", "Germany", "France", "Canada", "Sweden", "Switzerland")
+east <- c("China", "Japan", "India", "South Korea", "Russia", "Vietnam")
+```
+
+Next I filtered for only Nobel Prizes awarded in 2016 or later.
+
+```{r}
+regional_decade_only <- laureates_tidy %>%
+  mutate(year = as.numeric(nobelPrizes_awardYear)) %>%
+  filter(year >= 2016)
+```
+
+Next I used `case_when` to assign a `West`, `East`, or `Other` region based on the `birth.place.country.en`.
+
+```{r}
+regional_labeled <- regional_decade_only %>%
+  mutate(region = case_when(
+    str_detect(birth.place.country.en, paste(west, collapse="|")) ~ "West",
+    str_detect(birth.place.country.en, paste(east, collapse="|")) ~ "East",
+    TRUE ~ "Other"
+  ))
+```
+
+Next I removed the Nobel Prizes awarded with a region of `Other` and then used `summarise` to get a count of the Nobel Prizes for `West` and `East` region.
+
+```{r}
+# Filter out 'Other' regions and summarize the annual prize counts
+regional_comparison <- regional_labeled %>%
+  filter(region != "Other") %>%
+  group_by(year, region) %>%
+  summarise(prizes = n(), .groups = "drop")
+```
+
+Here I used `ggplot` to show the comparison data.  Based on the bar chart, the West has a drastically higher count of Nobel Prizes in the last decade compared to the East.
+
+```{r}
+library(ggplot2)
+
+ggplot(regional_comparison, aes(x = factor(year), y = prizes, fill = region)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  labs(title = "Nobel Prizes: West vs. East (Last Decade)",
+       x = "Year", y = "Total Prizes", fill = "Region")
+```
+
+## Conclusion
+
+The Nobel Prize public APIs can be used to gather data related to the Nobel Prize.  It took some time intially to figure out how to read and tidy the raw data but once that was done, the actual work involved with answering the chosen questions was pretty straight forward.
