@@ -1,0 +1,352 @@
+---
+title: "Assignment 10A Code Base"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Overview
+
+First I will get the example from Chapter 2 running first.
+
+## Reproducing the Base Example
+
+Taken from:
+
+Silge, J., & Robinson, D. (2017). "Sentiment Analysis with Tidy Data." Text Mining with R. Retrieved from https://www.tidytextmining.com/sentiment.html.
+
+```{r}
+library(tidytext)
+
+get_sentiments("afinn")
+```
+
+```{r}
+get_sentiments("bing")
+```
+
+```{r}
+get_sentiments("nrc")
+```
+
+```{r}
+library(janeaustenr)
+library(dplyr)
+library(stringr)
+
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+```{r}
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+library(tidyr)
+
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+```{r}
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+
+pride_prejudice
+```
+
+```{r}
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  pride_prejudice %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  pride_prejudice %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+```{r}
+get_sentiments("nrc") %>% 
+  filter(sentiment %in% c("positive", "negative")) %>% 
+  count(sentiment)
+```
+
+```{r}
+get_sentiments("bing") %>% 
+  count(sentiment)
+```
+
+```{r}
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+
+```{r}
+custom_stop_words <- bind_rows(tibble(word = c("miss"),  
+                                      lexicon = c("custom")), 
+                               stop_words)
+
+custom_stop_words
+```
+
+```{r}
+library(wordcloud)
+
+tidy_books %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+```{r}
+library(reshape2)
+
+tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+
+## Extend the Analysis
+
+For my extended analysis, I choose to add the Loughran-McDonald lexicon and use `The Adventures of Sherlock Holmes` within the `gutenbergr` library as my new text corpus.
+
+First I grabbed the Loughran-McDonald lexicon from the textdata library.
+```{r}
+library(tidytext)
+library(textdata)
+
+loughran <- get_sentiments("loughran")
+```
+
+Next I downloaded `The Adventures of Sherlock Holmes` from `gutenbergr` with the ID value `1661` and tidied the data like the base example by using `mutate` and `unnest_tokens`.
+
+```{r}
+library(gutenbergr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+sherlock_raw <- gutenberg_download(1661)
+
+sherlock_tidy <- sherlock_raw %>%
+  mutate(linenumber = row_number()) %>%
+  unnest_tokens(word, text)
+```
+
+Next, I used `inner_join` with the `bing` sentiments to calculate the overall sentiment.
+
+```{r}
+
+sherlock_sentiment <- sherlock_tidy %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+Next, I plotted the sentiment to get a visual of the results of the sentiment calculation.
+
+```{r}
+library(ggplot2)
+
+ggplot(sherlock_sentiment, aes(index, sentiment)) +
+  geom_col(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "The Adventures of Sherlock Holmes")
+```
+Next, I added the `Loughran` lexicon to the calculations with the `afinn`, `bing`, and `nrc` lexicons.
+
+```{r}
+afinn <- sherlock_tidy %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+compare_lexicons <- bind_rows(
+  sherlock_tidy %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing"),
+  
+  sherlock_tidy %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC"),
+    
+  sherlock_tidy %>% 
+    inner_join(get_sentiments("loughran") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "Loughran")
+) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, 
+              values_from = n, 
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>%
+  select(method, index, sentiment) # Keeping only columns that match AFINN
+```
+Here I compared the 4 different sentiment lexicons.
+
+```{r}
+bind_rows(afinn, compare_lexicons) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Comparing Sentiment Lexicons: Sherlock Holmes",
+       subtitle = "AFINN vs. Bing vs. Loughran vs. NRC",
+       y = "Net Sentiment Score",
+       x = "Narrative Progress (80-line chunks)")
+```
+Here I did a count check on the `loughran` lexicon, it had different categories compared to the `NRC` and `bing` lexicons.
+
+```{r}
+get_sentiments("loughran") %>% 
+  count(sentiment)
+```
+
+Then I did a count for the bing words in `The Adventures of Sherlock Holmes`.
+
+```{r}
+bing_word_counts <- sherlock_tidy %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+Here I did the graph of the bing word counts.
+
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+Then I did the calculations for the `lougran` word counts.
+
+```{r}
+loughran_word_counts <- sherlock_tidy %>%
+  inner_join(get_sentiments("loughran")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+Then I plotted the results of the `loughran` word counts.
+```{r}
+loughran_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+Here I added the word `miss` to `stop_words` because it comes up often.
+```{r}
+custom_stop_words <- bind_rows(tibble(word = c("miss"),  
+                                      lexicon = c("custom")), 
+                               stop_words)
+
+custom_stop_words
+```
+Here I created a word cloud for `sherlock_tidy`.
+
+```{r}
+library(wordcloud)
+
+sherlock_tidy %>%
+  anti_join(custom_stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+Then I created a comparison cloud for `sherlock_tidy` using the `bing` sentiments.
+
+```{r}
+library(reshape2)
+
+sherlock_tidy %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+
+## Conclusion
+
+Since the `Loughran` lexicon is used mostly for financial text, it was interesting to use it for an older novel like `The Adventures of Sherlock Holmes`.  The results from the sentiment analysis of `The Adventures of Sherlock Holmes` differs from that of the Jane Austen books in the fact that it is more negative with bigger spikes.  This is apparent in the ggplots and is likely due to the fact that Sherlock Holmes is a novel that deals with crime and mystery.  The results of the `Loughran` word count was also more negative compared to the other 3 lexicons used, likely due to the fact that it is used mostly for financial text.
