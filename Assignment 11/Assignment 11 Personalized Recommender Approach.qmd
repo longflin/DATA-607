@@ -1,0 +1,10 @@
+---
+title: "Assignment 11 Approach"
+author: "Long Lin"
+format: pdf
+editor: visual
+---
+
+## Assignment 11 Approach
+
+For assignment 11, I plan on building a personalized recommendation system.  In order to do this, I will explore the different personalized recommendation algorithms in order to determine the one I like best.  I believe the User-to-user collaborative filtering may fit my data set the most since it uses data from other user's selections to determine if users might like a certain movie.  I think an output such as predicted ratings may fit the best with the data set.  I will first check if a current package is available already for my needs but am open to implementing the algorithm from scratch, even if it may be a bit bare-bones.  And finally, to evaluate the performance of my recommender, if I do decide to go with the predicted ratings, I believe using cross-validation will be a solid option.
