@@ -1,0 +1,115 @@
+---
+title: "Assignment 11 Code Base"
+author: "Long Lin"
+format: pdf
+editor: visual
+---
+
+## Overview
+
+For this assignment, I created a personalized recommendation system using user-to-user collaborative filtering and my data set from assignment 2A.  In order to do this, I used a library called `recommenderlab` because it provides a User Based Collaborative Filtering model or UBCF for short.  The personalized recommendation system is used to predict a movie for each user that they are likely to enjoy.  Afterwards, I evaluated the personalized recommendation system using a cross validation scheme and used that to draw my final conclusions.
+
+## Reading in the data
+
+To start off, I grabbed the data from my previous assignment and loaded it in as a tribble.
+
+```{r}
+library(tidyverse)
+
+movies_df <- tribble(
+  ~User,     ~Movie,                             ~Rating,
+  "David",   "Oppenheimer",                      5,
+  "David",   "Wicked",                           3,
+  "David",   "Top Gun: Maverick",                4,
+  "David",   "Zootopia 2",                       4,
+  "Aaron",   "Oppenheimer",                      4,
+  "Aaron",   "Top Gun: Maverick",                5,
+  "Aaron",   "Zootopia 2",                       4,
+  "Aaron",   "The Housemaid",                    4,
+  "Josh",    "Oppenheimer",                      4,
+  "Josh",    "Wicked",                           4,
+  "Josh",    "Top Gun: Maverick",                3,
+  "Josh",    "Zootopia 2",                       3,
+  "Cameron", "Wicked",                           3,
+  "Cameron", "Zootopia 2",                       5,
+  "Cameron", "Captain America: Brave New World", 4,
+  "June",    "Top Gun: Maverick",                3,
+  "June",    "The Housemaid",                    5,
+  "June",    "Captain America: Brave New World", 3
+)
+
+print(movies_df)
+```
+
+Next, I converted the `movies_df` to a wide data format using `pivot_wider`.
+
+```{r}
+movies_wide <- movies_df %>%
+  pivot_wider(names_from = Movie, values_from = Rating) %>%
+  column_to_rownames("User")
+
+print(movies_wide)
+```
+
+## Using recommenderlab
+
+From there, I decided to use an existing recommender package called `recommenderlab` because it offered the User-based collaborative filtering (UBCF) algorithm that I was interested in.
+
+In order to start using recommenderlab, I had to convert my wide data format to a specialized `realRatingMatrix`.
+
+```{r}
+library(recommenderlab)
+
+rating_matrix <- as(as.matrix(movies_wide), "realRatingMatrix")
+
+print(rating_matrix)
+```
+Next, I created a UBCF (User-Based Collaborative Filtering) recommender model using `recommenderlab` and my data from 5 users.  This looks for users with similar movie tastes to David, Aaron, etc.
+
+```{r}
+recommender_model <- Recommender(data = rating_matrix, method = "UBCF")
+
+print(recommender_model)
+```
+Next, I used the `recommender_model` to predict the top unseen movie that each user would likely enjoy.
+
+```{r}
+predictions <- predict(recommender_model, rating_matrix, n = 1)
+
+prediction_list <- as(predictions, "list")
+names(prediction_list) <- rownames(rating_matrix)
+
+print(prediction_list)
+```
+Here are the results of the personalized recommendation system using a UBCF (User-Based Collaborative Filtering) model.  Although it looks like the system works, I believe my data set is too small for it to work effectively since it recommends the same movie to three different users.
+
+## Evaluating the Recommender System
+
+In order to evaluate the recommender system, I initialized a 4-fold cross validation scheme because my dataset is small with only 18 ratings.  A 4-fold cross validation scheme splits the data into 4 folds or equal parts and then tests it against the other 3 folds for a total of 4 tests.
+
+```{r}
+eval_scheme <- evaluationScheme(data = rating_matrix, 
+                                method = "cross-validation", 
+                                k = 4, 
+                                given = 1, 
+                                goodRating = 4)
+
+print(eval_scheme)
+```
+Next, I ran the evaluation using the `eval_scheme` and calculated the accuracy.
+
+```{r}
+eval_recommender <- Recommender(getData(eval_scheme, "train"), 
+                                method = "UBCF", 
+                                parameter = list(nn = 1))
+
+eval_prediction <- predict(eval_recommender, getData(eval_scheme, "known"), type = "ratings")
+
+eval_accuracy <- calcPredictionAccuracy(eval_prediction, getData(eval_scheme, "unknown"))
+print(eval_accuracy)
+```
+The results were all `NaN` most likely due to the fact that the dataset was too small and there was not enough overlap between the users.
+
+## Conclusion
+
+The personalized recommender system using a User Based Collaborative Filtering model was able to generate a prediction for each user but when evaluating the model and the error metrics, it seems like the system was not robust enough because it lacked data.  In order to improve the system, I believe more data is a must in order to properly generate predictions based off of user overlap.
