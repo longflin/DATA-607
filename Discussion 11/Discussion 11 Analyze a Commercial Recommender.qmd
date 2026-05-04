@@ -1,0 +1,39 @@
+---
+title: "Discussion 11"
+author: "Long Lin"
+format: html
+editor: visual
+---
+
+## Discussion 11 Analyze a Commercial Recommender
+
+
+For this discussion assignment, I choose to do a Scenario Design analysis on YouTube's video sharing platform.
+
+## 1. Who are your target users?
+
+The target users are consumers who watch videos that are interesting to them and who end up watching the ads on videos which produces revenue for YouTube and their parent company Alphabet.
+
+## 2. What are their key goals?
+
+The target users' key goals are entertainment, education, and social connection with their peers.  People use YouTube in different ways.  I like to watch YouTube for the many entertaining documentaries and for learning a new skill.  I also like how the comment section on videos can be a place for discussion in regards to the content of the video.
+
+## 3. How can you help them accomplish those goals?
+
+YouTube can help their consumers accomplish those goals by recommending better videos to the target audience.  For example, when I watch YouTube food videos, I get recommended more videos by other creators in the food space.  I noticed over time that my personalized feed became mostly about food and fitness because that's a lot of the content that I watch on YouTube.
+
+## Reverse Engineering
+
+YouTube's algorithm uses a lot of different ways to curate the content to each specific user.  For example, when I watch fitness videos, I get recommended more fitness videos by other creators.  Another way they could be recommending videos is by recommending videos that other users are watching based on your shared watch history.  Like if you watched the same video as other people, then you might get recommendations for other videos that they have also watched.
+
+According to YouTube's own blog, they use a lot of different metrics like clicks, watch time, shares/likes, and even survey responses.  I have noticed personally that the longer I watch a video, the more likely I get recommended a similar video.  When I was watching the highlights for the College Football playoffs, I would get more videos in my recommended feed of highlights for other games in the playoffs.  The same happened when I was watching the NCAA basketball March Madness as well.
+
+## Personal Recommendations
+
+My personal recommendation for YouTube would be to stop recommending content if the consumers have made it clear that they don't want to see something.  When I use YouTube, they like to recommend their games and that's just something I always close the recommendation for but they keep recommending it for some reason.  Same with some videos that are just not interesting to me personally.  I think eventually it will stop recommending the games but for now, it will pop up every week or so.
+
+
+## References
+
+https://blog.youtube/inside-youtube/on-youtubes-recommendation-system/
+
